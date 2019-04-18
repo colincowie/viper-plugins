@@ -24,7 +24,7 @@ class Similarity(Module):
     def __init__(self):
         super(Similarity, self).__init__()
         self.parser.add_argument('-t', '--threshold', dest='threshold', type=float, default=0.75, help='Jaccard index threshold (default is 0.7)')
-        self.parser.add_argument('-o', '--output', dest='outfile', default='similarity.png', help='Output file name for the graph image.') #todo: fix /implement this
+        self.parser.add_argument('-o', '--output', dest='outfile', default='similarity.dot', help='Output file name for the graph image.') #todo: fix /implement this
         self.parser.add_argument('-p', '--pdb', action='store_true', help='Add path debug information label on nodes')
         self.parser.add_argument('-s', '--strings', action='store_true', help='Compare samples using strings')
         self.parser.add_argument('-i', '--imports', action='store_true', help='Compare samples using imports')
@@ -208,9 +208,14 @@ class Similarity(Module):
                 graph.add_edge(malware1, malware2, color=graph_color, alpha=0.2, shape='circle', penwidth=(jaccard_index)*4)
 
         # Save information to graph. todo: find a good way to do this cleanly
-        if not self.args.cli:
-            write_dot(graph, 'similarity.dot')
-            self.log('info', 'Attempting to convert graph to image')
-            os.system('fdp -Tpng similarity.dot -o similarity.png')
-            self.log('success', 'Saved graph data to similarity.png')
+        output = "similarity.dot"
+        if self.args.outfile:
+            output = self.args.outfile
+            if ".dot" not in output:
+                output = output + ".dot"
 
+        if not self.args.cli:
+            write_dot(graph, output)
+            self.log('info', 'Attempting to convert graph to image')
+            os.system('fdp -Tpng '+output+' -o '+output[:-4]+'.png')
+            self.log('success', 'Saved graph data to '+output[:-4]+'.png')
