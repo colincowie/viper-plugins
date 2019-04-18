@@ -24,7 +24,7 @@ class Similarity(Module):
     def __init__(self):
         super(Similarity, self).__init__()
         self.parser.add_argument('-t', '--threshold', dest='threshold', type=float, default=0.75, help='Jaccard index threshold (default is 0.7)')
-        self.parser.add_argument('-o', '--output', dest='outfile', default='similarity.dot', help='Output file name for the graph image.') #todo: fix /implement this
+        self.parser.add_argument('-o', '--output', dest='outfile', default='similarity.dot', help='Output file name for the graph image.')
         self.parser.add_argument('-p', '--pdb', action='store_true', help='Add path debug information label on nodes')
         self.parser.add_argument('-s', '--strings', action='store_true', help='Compare samples using strings')
         self.parser.add_argument('-i', '--imports', action='store_true', help='Compare samples using imports')
