@@ -1,5 +1,7 @@
+<p align="center"><img src="https://img.shields.io/badge/Twitter%3A-%40th3__protoCOL-blue.svg" alt="Twitter" /></p>
+
 # viper-plugins
-This is my collection of plugins for [the Viper Framework](https://github.com/viper-framework/viper)
+These are my plugins for [the Viper Framework](https://github.com/viper-framework/viper), still in development!
 
 ### Plugins
 * Similarity Analysis
@@ -15,6 +17,8 @@ Performs Similarity analysis to cluster and visualize collections of malware. Cu
 * fdp (to do: remove this) 
 
 ### Examples
+<img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/30_strings_73_exif.png" alt="Ryuk Strings Similarity" width="400"/> <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/100_imports_99.png" alt="Ryuk Imports Similarity" width="400"/>
+
 
 ```
 usage: similarity [-h] [-t THRESHOLD] [-o OUTFILE] [-p] [-s] [-i] [-m MIN]
