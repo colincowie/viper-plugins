@@ -9,17 +9,6 @@ These are my plugins for [the Viper Framework](https://github.com/viper-framewor
 
 ## Similarity Analysis
 Performs Similarity analysis to cluster and visualize collections of malware. Currently supports comparing by strings, windows pe imports and exif data.
-### Requirements
-* The Viper Framework 
-* pefile
-* networkx 
-* exiftool
-* fdp (to do: remove this) 
-
-### Examples
-<img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/30_strings_73_exif.png" alt="Ryuk Strings Similarity" width="400"/> <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/100_imports_99.png" alt="Ryuk Imports Similarity" width="400"/>
-
-
 ```
 usage: similarity [-h] [-t THRESHOLD] [-o OUTFILE] [-p] [-s] [-i] [-m MIN]
                   [-e] [-c]
@@ -39,6 +28,16 @@ optional arguments:
   -e, --exif            Compare samples using ExifData
   -c, --cli             Command line only, no graphs
 ```
+### Requirements
+* The Viper Framework 
+* pefile
+* networkx 
+* exiftool
+* fdp (to do: remove this) 
+
+### Examples
+<img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/30_strings_73_exif.png" alt="Ryuk Strings Similarity" width="400"/> <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/100_imports_99.png" alt="Ryuk Imports Similarity" width="400"/>
+
 ### Development
 * Fix graph export / .dot to .png conversion
 * Add web ui support
