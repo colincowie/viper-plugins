@@ -2,11 +2,11 @@
 This is my collection of plugins for [the Viper Framework](https://github.com/viper-framework/viper)
 
 ### Plugins
-* Simularity Analysis
+* Similarity Analysis
 * Timestamp Heat Map
 
-## Simularity Analysis
-Performs simularity analysis to cluster and visualize collections of malware. Currently supports comparing by strings, windows pe imports and exif data.
+## Similarity Analysis
+Performs Similarity analysis to cluster and visualize collections of malware. Currently supports comparing by strings, windows pe imports and exif data.
 ### Requirements
 * The Viper Framework 
 * pefile
