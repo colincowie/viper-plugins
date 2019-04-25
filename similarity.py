@@ -5,7 +5,6 @@ import re
 import string
 import pefile
 import exiftool
-import networkx
 import itertools
 
 from viper.common.abstracts import Module
@@ -14,7 +13,15 @@ from viper.core.config import __config__
 from viper.core.database import Database
 from viper.core.storage import get_sample_path
 from viper.common.objects import File
-from networkx.drawing.nx_pydot import write_dot
+
+from py2neo import Graph, Node, Relationship
+from neomodel import StructuredNode, StringProperty, DateProperty
+
+# Define Neo4j Node
+class SampleNode(StructuredNode):
+    name = StringProperty(unique_index=True)
+    timestamp = DateProperty()
+    pdb = StringProperty()
 
 class Similarity(Module):
     cmd = 'similarity'
@@ -24,13 +31,11 @@ class Similarity(Module):
     def __init__(self):
         super(Similarity, self).__init__()
         self.parser.add_argument('-t', '--threshold', dest='threshold', type=float, default=0.75, help='Jaccard index threshold (default is 0.7)')
-        self.parser.add_argument('-o', '--output', dest='outfile', default='similarity.dot', help='Output file name for the graph image.')
         self.parser.add_argument('-p', '--pdb', action='store_true', help='Add path debug information label on nodes')
         self.parser.add_argument('-s', '--strings', action='store_true', help='Compare samples using strings')
         self.parser.add_argument('-i', '--imports', action='store_true', help='Compare samples using imports')
         self.parser.add_argument('-m', '--min', dest='min', type=int, default=4, help='Set minimum string length for search')
         self.parser.add_argument('-e', '--exif', action='store_true', help='Compare samples using ExifData')
-        self.parser.add_argument('-c', '--cli', action='store_true', help='Command line only, no graphs')
 
     def jaccard(self, set1, set2):
         set1_set = set(set1)
@@ -128,14 +133,18 @@ class Similarity(Module):
         db = Database()
         samples = db.find(key='all')
         malware_features = dict()
-        malware_paths = []
-        graph = networkx.Graph()
+
+        # Connect to neo4j data and define a graph
+        graph = Graph("http://localhost:7474/db/data/", user="neo4j", password="infected")
+        graph.delete_all()
+
+        sample_nodes = []
 
         for sample in samples:
             malware_path = get_sample_path(sample.sha256)
             features = []
-            node_label = (os.path.split(sample.sha256)[-1][:10])
 
+            timestamp = ""
             # Check arguments to determine what should be compared
             if self.args.exif:
                 if not self.args.strings and not self.args.imports: # Can I find a better way to do this?
@@ -144,7 +153,7 @@ class Similarity(Module):
                 with exiftool.ExifTool() as et:
                     metadata = et.get_metadata(malware_path)
                 if 'EXE:TimeStamp' in metadata:
-                    node_label = node_label + "\n" + (metadata['EXE:TimeStamp'][:10])
+                    timestamp = metadata['EXE:TimeStamp'][:10]
             if self.args.strings:
                 features += self.get_strings(File(malware_path))
             if self.args.imports:
@@ -155,6 +164,7 @@ class Similarity(Module):
                     self.log('warning', 'No imports found for {0}...'.format(sample.md5))
 
             # Adds path debug information to nodes
+            pdb_label = ""
             if self.args.pdb:
                 pdb = self.parse_pdb(self.get_strings(File(malware_path)))
                 if pdb is not None:
@@ -164,8 +174,7 @@ class Similarity(Module):
                         project_end = pdb.index('\\x64\\')
                     except:
                         self.log('error','Unexpected pdb path')
-                    pdb_label = pdb[int(project_start)+9:int(project_end)] # todo: find a cleaner way to do this
-                    node_label = node_label + "\n" + pdb_label
+                    pdb_label = pdb[int(project_start)+9:int(project_end)]
 
             # Set default comparison
             if (not self.args.strings and not self.args.imports and not self.args.exif):
@@ -177,45 +186,38 @@ class Similarity(Module):
 
             self.log('success', 'Extracted {0} features from {1}...'.format(len(features), sample.md5))
 
-            malware_paths.append(malware_path)
             malware_features[malware_path] = features
 
-            graph.add_node(malware_path, color='black', label=node_label)
+            tx = graph.begin()
 
-        # Determine the jaccard index beteween malware
-        for malware1, malware2 in itertools.combinations(malware_paths, 2):
+            #Create new nodes
+            sample_node = Node("SampleNode", name=str(sample.sha256), timestamp=timestamp, pdb=pdb_label)
+            labels = [sample.sha256, timestamp]
+            sample_node.cast(labels)
+            tx.create(sample_node)
+            tx.commit()
+            sample_nodes.append(sample_node)
+
+        # Determine the jaccard index beteween malware and graph realtionships
+        self.log('info', 'Starting graphing process')
+        for malware1, malware2 in itertools.combinations(sample_nodes, 2):
             # Compute the jaccard index for the current malware pair
-            jaccard_index = self.jaccard(malware_features[malware1], malware_features[malware2])
+            jaccard_index = self.jaccard(malware_features[get_sample_path(malware1["name"])], malware_features[get_sample_path(malware2["name"])])
             # If the jaccard distance is above the threshold draw a connection between nodes
             if jaccard_index > threshold:
-                if jaccard_index > 0.965:
-                    graph_color = '#06121B'
-                elif jaccard_index > 0.93:
-                    graph_color = '#0D2435'
-                elif jaccard_index > 0.895:
-                    graph_color = '#133650'
-                elif jaccard_index > 0.825:
-                    graph_color = '#19496A'
-                elif jaccard_index > 0.79:
-                    graph_color = '#1F5B85'
-                elif jaccard_index > 0.755:
-                    graph_color = '#266D9F'
-                elif jaccard_index > 0.72:
-                    graph_color = '#2C7FBA'
-                else:
-                    graph_color = '#3291D4'
+                if jaccard_index > 0.95:
+                    r = Relationship(malware1,"very_high", malware2)
+                elif jaccard_index > 0.88:
+                    r = Relationship(malware1,"high", malware2)
+                elif jaccard_index > 0.83:
+                    r = Relationship(malware1,"moderate", malware2)
+                elif jaccard_index > 0.78:
+                    r = Relationship(malware1,"low", malware2)
+                elif jaccard_index > 0.60:
+                    r = Relationship(malware1,"very_low", malware2)
 
-                graph.add_edge(malware1, malware2, color=graph_color, alpha=0.2, shape='circle', penwidth=(jaccard_index)*4)
+                tx = graph.begin()
+                tx.create(r)
+                tx.commit()
 
-        # Save information to graph. todo: find a good way to do this cleanly
-        output = "similarity.dot"
-        if self.args.outfile:
-            output = self.args.outfile
-            if ".dot" not in output:
-                output = output + ".dot"
-
-        if not self.args.cli:
-            write_dot(graph, output)
-            self.log('info', 'Attempting to convert graph to image')
-            os.system('fdp -Tpng '+output+' -o '+output[:-4]+'.png')
-            self.log('success', 'Saved graph data to '+output[:-4]+'.png')
+        self.log('success', 'Finished graphing nodes and realtionships')
