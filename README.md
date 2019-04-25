@@ -40,10 +40,8 @@ optional arguments:
 <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/one.png" alt="Ryuk Strings Similarity" width="400"/> <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/two.png" alt="Ryuk Imports Similarity" width="400"/>
 
 ### Development
-* Fix graph export / .dot to .png conversion
 * Add web ui support
 * Add linux and mac based malware support
-* Improve labeling options 
 
 ## Timestamp Heat Map
 _Coming soon..._
