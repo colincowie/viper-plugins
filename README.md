@@ -1,4 +1,4 @@
-<p align="center"><img src="https://img.shields.io/badge/Twitter%3A-%40th3__protoCOL-blue.svg" alt="Twitter" /></p>
+<p align="center"><a href="https://twitter.com/th3_protoCOL" target="_blank"><img src="https://img.shields.io/badge/Twitter%3A-%40th3__protoCOL-blue.svg" alt="Twitter" /></a></p>
 
 # viper-plugins
 These are my plugins for [the Viper Framework](https://github.com/viper-framework/viper), still in development!
