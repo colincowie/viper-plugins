@@ -148,7 +148,7 @@ class Similarity(Module):
         try:
             graph.delete_all()
         except:
-            print("Are the credintials correct in the config file?")
+            self.log("Error", "Issue deleting graph. Are the credentials correct in the config file?")
             return
 
         sample_nodes = []
