@@ -36,6 +36,16 @@ optional arguments:
 * [py2neo](https://py2neo.org/v4/)
 * neomodel
 
+#### Add to viper.conf
+Update to match your environment
+
+```
+[similarity]
+url = http://localhost:7474/db/data
+user = neo4j
+pwd = 
+```
+
 ### Examples
 <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/one.png" alt="Ryuk Strings Similarity" width="400"/> <img src="https://github.com/colincowie/viper-plugins/raw/master/screenshots/two.png" alt="Ryuk Imports Similarity" width="400"/>
 
