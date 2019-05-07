@@ -77,22 +77,24 @@ class Template(Module):
         sample = File(file)
         strings = self.get_strings(sample)
 
+        # Sets up rows - modify these
+        rows = [
+            ['Name', sample.name],
+            ['MD5', sample.md5]
+        ]
+
         # Get exif data
         metadata = []
+        timestamp = ""
         with exiftool.ExifTool() as et:
             metadata = et.get_metadata(file)
         if 'EXE:TimeStamp' in metadata:
-            timestamp = metadata['EXE:TimeStamp'][:10]
-
+            rows.append(['TimeStamp',metadata['EXE:TimeStamp'][:10]])
+        if 'EXE:CodeSize' in metadata:
+            rows.append(['CodeSize',metadata['EXE:CodeSize']])
         header = ['Key', 'Value']
-        # Modify these!
-        rows = [
-            ['Name', sample.name],
-            ['MD5', sample.md5],
-            ['Timestamp',timestamp],
-            ['CodeSize', metadata['EXE:CodeSize']],
-            ['PDB Path', self.parse_pdb(strings)]
-        ]
+
+        rows.append(['PDB Path', self.parse_pdb(strings)])
 
         # Search for specfic string
         if self.args.search_string:
@@ -107,13 +109,16 @@ class Template(Module):
     def run(self):
         super(Template, self).run()
 
+        if self.args is None:
+            return
+
         # Check arguments and scan accordingly
-        if not __sessions__.is_set() and not self.args.all:
-            self.log('error', 'No open session. Run with \'-a\' to scan all files.')
-        elif self.args.all:
+        if self.args.all:
             db = Database()
             samples = db.find(key='all')
             for sample in samples:
                 self.scan(get_sample_path(sample.sha256))
-        else:
+        elif __sessions__.is_set():
             self.scan(__sessions__.current.file.path)
+        else:
+            self.usage()
