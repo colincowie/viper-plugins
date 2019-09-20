@@ -14,13 +14,15 @@ from viper.core.storage import get_sample_path
 from viper.common.objects import File
 
 class Template(Module):
-    cmd = 'template'
+    cmd = 'hunt'
     description = 'Template module for tracking malware'
     authors = ['th3_protoCOL']
+    emails = [] # todo: move to its own plugin
 
     def __init__(self):
         super(Template, self).__init__()
         self.parser.add_argument('-a', '--all', action='store_true', help='Run the module on all samples')
+        self.parser.add_argument('-e', '--emails', action='store_true', help='Extract all email addresses')
         self.parser.add_argument('-s', '--search', dest='search_string', help='Search for a specifc string')
 
     def get_strings(self, f):
@@ -64,6 +66,14 @@ class Template(Module):
 
         return results
 
+    def parse_ips(self, strings):
+        IP_REGEX = re.compile(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$')
+        results = []
+        for entry in strings:
+            if IP_REGEX.search(entry):
+                results.append(entry)
+        return results;
+
     def parse_pdb(self, strings):
         PDB_REGEX = re.compile(r'\.pdb$', re.IGNORECASE)
         result = None
@@ -71,6 +81,14 @@ class Template(Module):
             if PDB_REGEX.search(entry):
                 result = entry;
         return result;
+
+    def parse_emails(self, strings):
+        EMAIL_REGEX = re.compile(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)', re.IGNORECASE)
+        emails = []
+        for entry in strings:
+            if EMAIL_REGEX.search(entry):
+                emails.append(entry);
+        return emails;
 
     # Main analysis function
     def scan(self, file):
@@ -95,6 +113,13 @@ class Template(Module):
         header = ['Key', 'Value']
 
         rows.append(['PDB Path', self.parse_pdb(strings)])
+        rows.append(['IPv4s', self.parse_ips(strings)])
+        rows.append(['Emails', self.parse_emails(strings)])
+
+        #Find Emails
+        if self.args.emails:
+            for email in self.parse_emails(strings):
+                self.emails.append(email)
 
         # Search for specfic string
         if self.args.search_string:
@@ -118,6 +143,10 @@ class Template(Module):
             samples = db.find(key='all')
             for sample in samples:
                 self.scan(get_sample_path(sample.sha256))
+            if self.args.emails:
+                self.log('success', "Found emails: ")
+                self.log('success', str(set(self.emails)))
+
         elif __sessions__.is_set():
             self.scan(__sessions__.current.file.path)
         else:
