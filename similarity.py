@@ -17,6 +17,8 @@ from viper.common.objects import File
 from py2neo import Graph, Node, Relationship
 from neomodel import StructuredNode, StringProperty, DateProperty
 
+cfg = __config__
+
 # Define Neo4j Node
 class SampleNode(StructuredNode):
     name = StringProperty(unique_index=True)
@@ -91,8 +93,7 @@ class Similarity(Module):
 
         for entry in pe.DIRECTORY_ENTRY_IMPORT:
             for imp in entry.imports:
-                if imp.name is not None:
-                    results.append(imp.name.decode('utf-8'))
+                results.append(imp.name.decode('utf-8'))
         return results
 
     def get_exif(self, f):
@@ -135,9 +136,20 @@ class Similarity(Module):
         samples = db.find(key='all')
         malware_features = dict()
 
-        # Connect to neo4j data and define a graph
-        graph = Graph("http://localhost:7474/db/data/", user="neo4j", password="infected")
-        graph.delete_all()
+        # Neo4j Setup
+        ## Get Url from Config
+        neo4j_url = cfg.similarity.url
+        ## Get Username from Config
+        neo4j_user = cfg.similarity.user
+        ## Get Password from Config
+        neo4j_pwd = cfg.similarity.pwd
+        ## Connect to neo4j data and define a graph
+        graph = Graph(neo4j_url, user=neo4j_user, password=neo4j_pwd)
+        try:
+            graph.delete_all()
+        except:
+            self.log("Error", "Issue deleting graph. Are the credentials correct in the config file?")
+            return
 
         sample_nodes = []
 
@@ -148,7 +160,8 @@ class Similarity(Module):
             timestamp = ""
             # Check arguments to determine what should be compared
             if self.args.exif:
-                features += self.get_exif(malware_path)
+                if not self.args.strings and not self.args.imports: # Can I find a better way to do this?
+                    features += self.get_exif(malware_path)
                 metadata = []
                 with exiftool.ExifTool() as et:
                     metadata = et.get_metadata(malware_path)
@@ -172,19 +185,20 @@ class Similarity(Module):
                     try:
                         project_start = pdb.index('\\Projects')
                         project_end = pdb.index('\\x64\\')
+                        # if project_start or project_end is not set then this will fail, so moved here.
+                        pdb_label = pdb[int(project_start)+9:int(project_end)]
                     except:
                         self.log('error','Unexpected pdb path')
-                    #pdb_label = pdb[int(project_start)+9:int(project_end)]
-                    pdb_label = pdb
+
             # Set default comparison
             if (not self.args.strings and not self.args.imports and not self.args.exif):
                 features += self.get_strings(File(malware_path))
 
             if len(features) == 0:
-                self.log('error', 'Extracted {0} features from {1} '.format(len(features), sample.md5))
+                self.log('error', 'Extracted {0} features from {1}...'.format(len(features), sample.md5))
                 continue
 
-            self.log('success', 'Extracted {0} features from {1} '.format(len(features), sample.md5))
+            self.log('success', 'Extracted {0} features from {1}...'.format(len(features), sample.md5))
 
             malware_features[malware_path] = features
 
