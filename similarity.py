@@ -38,6 +38,7 @@ class Similarity(Module):
         self.parser.add_argument('-i', '--imports', action='store_true', help='Compare samples using imports')
         self.parser.add_argument('-m', '--min', dest='min', type=int, default=4, help='Set minimum string length for search')
         self.parser.add_argument('-e', '--exif', action='store_true', help='Compare samples using ExifData')
+        
 
     def jaccard(self, set1, set2):
         set1_set = set(set1)
@@ -101,13 +102,19 @@ class Similarity(Module):
             metadata = et.get_metadata(f)
             return metadata
 
-    def parse_pdb(self, strings):
-        PDB_REGEX = re.compile(r'\.pdb$', re.IGNORECASE)
+    def parse_pdb(self, path):
+        try:
+            pe = pefile.PE(path)
+        except pefile.PEFormatError:
+            return None
+        
         result = None
-        for entry in strings:
-            if PDB_REGEX.search(entry):
-                result = entry;
-        return result;
+        try:
+            result = str(pe.get_string_from_data(0x18, pe.get_data(pe.DIRECTORY_ENTRY_DEBUG[0].struct.AddressOfRawData, pe.DIRECTORY_ENTRY_DEBUG[0].struct.SizeOfData)))
+        except Exception:
+            pass
+
+        return result
 
     # todo: improve and implement this
     def parse_dll(self, strings):
@@ -116,8 +123,8 @@ class Similarity(Module):
         for entry in strings:
             if DLL_REGEX.search(entry):
                 if "32" not in entry:
-                    result = entry;
-        return result;
+                    result = entry
+        return result
 
     def run(self):
         super(Similarity, self).run()
@@ -179,14 +186,15 @@ class Similarity(Module):
             # Adds path debug information to nodes
             pdb_label = ""
             if self.args.pdb:
-                pdb = self.parse_pdb(self.get_strings(File(malware_path)))
+                pdb = self.parse_pdb(malware_path)
                 if pdb is not None:
                     self.log('success', 'Found pdb path {0}'.format(pdb))
                     try:
-                        project_start = pdb.index('\\Projects')
-                        project_end = pdb.index('\\x64\\')
-                        # if project_start or project_end is not set then this will fail, so moved here.
-                        pdb_label = pdb[int(project_start)+9:int(project_end)]
+                        ## Was not sure if you had a special purpose behind parsing the pdb string
+                        #project_start = pdb.index('\\Projects')
+                        #project_end = pdb.index('\\x64\\')
+                        #pdb_label = pdb[int(project_start)+9:int(project_end)]
+                        pdb_label = pdb
                     except:
                         self.log('error','Unexpected pdb path')
 
